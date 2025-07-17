@@ -102,7 +102,7 @@ Return ONLY the JSON object, no other text.`;
       throw new Error(`Claude API error (${response.status}): ${error}`);
     }
 
-    const result = await response.json();
+    const result = await response.json() as any;
     const content = result.content[0].text;
 
     try {

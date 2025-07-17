@@ -44,7 +44,7 @@ export async function importCommand(pdfPath: string, options: { preview?: boolea
     logger.startSpinner('Matching exercises to templates...');
     const matcher = new ExerciseMatcher(templates);
     const allMatches = await matchAllExercises(workoutProgram, matcher);
-    logger.succeedSpinner(`Matched ${allMatches.length} unique exercises`);
+    logger.succeedSpinner(`Matched ${allMatches.size} unique exercises`);
 
     // Preview mode - show what would be imported
     if (options.preview) {
