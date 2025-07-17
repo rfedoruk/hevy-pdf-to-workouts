@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import * as XLSX from 'xlsx';
+import { read, utils } from 'xlsx';
 import type { WorkoutProgram } from '../types/workout.js';
 
 export class ClaudeApiClient {
@@ -12,7 +12,8 @@ export class ClaudeApiClient {
 
   async extractWorkoutFromExcel(excelPath: string): Promise<WorkoutProgram> {
     // Read and parse Excel file
-    const workbook = XLSX.readFile(excelPath);
+    const fileBuffer = readFileSync(excelPath);
+    const workbook = read(fileBuffer, { type: 'buffer' });
     const excelData = this.parseExcelWorkbook(workbook);
 
     const prompt = `
@@ -105,7 +106,7 @@ ${JSON.stringify(excelData, null, 2)}`;
     }
   }
 
-  private parseExcelWorkbook(workbook: XLSX.WorkBook): any {
+  private parseExcelWorkbook(workbook: any): any {
     const result: any = {
       sheets: {},
       sheetNames: workbook.SheetNames,
@@ -116,7 +117,7 @@ ${JSON.stringify(excelData, null, 2)}`;
       const worksheet = workbook.Sheets[sheetName];
       
       // Convert to JSON with headers
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+      const jsonData = utils.sheet_to_json(worksheet, { 
         header: 1,
         defval: '',
         raw: false 
@@ -126,7 +127,7 @@ ${JSON.stringify(excelData, null, 2)}`;
         name: sheetName,
         data: jsonData,
         // Also include formatted version for easier parsing
-        formatted: XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+        formatted: utils.sheet_to_json(worksheet, { defval: '' })
       };
     }
 
