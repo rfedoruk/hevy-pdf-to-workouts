@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import { ConfigManager } from '../services/config.js';
 import { HevyApiClient } from '../services/hevy-api.js';
-import { ClaudeApiClient } from '../services/claude-api.js';
+import { AiriaApiClient } from '../services/airia-api.js';
 import { logger } from '../utils/logger.js';
 
 export async function setupCommand(): Promise<void> {
@@ -42,50 +42,67 @@ export async function setupCommand(): Promise<void> {
   }
   logger.succeedSpinner('Hevy API connection successful');
 
-  // Get Claude API key
-  const { claudeApiKey } = await inquirer.prompt([
+  // Get Airia API key
+  const { airiaApiKey } = await inquirer.prompt([
     {
       type: 'password',
-      name: 'claudeApiKey',
-      message: 'Enter your Claude API key:',
-      default: config.getClaudeApiKey(),
+      name: 'airiaApiKey',
+      message: 'Enter your Airia API key:',
+      default: config.getAiriaApiKey(),
       validate: (input: string) => {
         if (!input.trim()) {
-          return 'Claude API key is required';
+          return 'Airia API key is required';
         }
-        if (!config.validateClaudeApiKey(input.trim())) {
-          return 'Invalid Claude API key format. Must start with sk-ant-';
+        if (!config.validateAiriaApiKey(input.trim())) {
+          return 'Invalid Airia API key format.';
         }
         return true;
       },
     },
   ]);
 
-  // Test Claude API connection
-  logger.startSpinner('Testing Claude API connection...');
-  const claudeClient = new ClaudeApiClient(claudeApiKey.trim());
-  const claudeConnected = await claudeClient.testConnection();
+  // Get Airia Pipeline ID first, then test connection
+  const { airiaPipelineId } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'airiaPipelineId',
+      message: 'Enter your Airia Pipeline ID for workout processing:',
+      default: config.getAiriaPipelineId(),
+      validate: (input: string) => {
+        if (!input.trim()) {
+          return 'Airia Pipeline ID is required';
+        }
+        return true;
+      },
+    },
+  ]);
 
-  if (!claudeConnected) {
-    logger.failSpinner('Failed to connect to Claude API');
+  // Test Airia API connection
+  logger.startSpinner('Testing Airia API connection...');
+  const airiaClient = new AiriaApiClient(airiaApiKey.trim(), airiaPipelineId.trim());
+  const airiaConnected = await airiaClient.testConnection();
+
+  if (!airiaConnected) {
+    logger.failSpinner('Failed to connect to Airia API');
     logger.error('Please check your API key and try again.');
     return;
   }
-  logger.succeedSpinner('Claude API connection successful');
+  logger.succeedSpinner('Airia API connection successful');
 
   // Save configuration
   try {
     config.setHevyApiKey(hevyApiKey.trim());
-    config.setClaudeApiKey(claudeApiKey.trim());
+    config.setAiriaApiKey(airiaApiKey.trim());
+    config.setAiriaPipelineId(airiaPipelineId.trim());
     config.saveConfig();
 
     logger.log('');
     logger.success('Configuration saved successfully!');
-    logger.info('You can now use the import command to process workout PDFs.');
+    logger.info('You can now use the import command to process workout Excel files.');
     logger.log('');
     logger.info('Next steps:');
-    logger.log('  1. Run: hevy-importer preview <pdf-file>');
-    logger.log('  2. Run: hevy-importer import <pdf-file>');
+    logger.log('  1. Run: hevy-importer preview <excel-file>');
+    logger.log('  2. Run: hevy-importer import <excel-file>');
   } catch (error) {
     logger.error(`Failed to save configuration: ${error}`);
   }

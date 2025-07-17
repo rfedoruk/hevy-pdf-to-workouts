@@ -15,7 +15,7 @@ program
 
 program
   .command('setup')
-  .description('Configure API keys for Hevy and Claude')
+  .description('Configure API keys for Hevy and Airia AI')
   .action(async () => {
     try {
       await setupCommand();

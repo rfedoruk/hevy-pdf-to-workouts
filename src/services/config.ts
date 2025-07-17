@@ -4,7 +4,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 
 export interface Config {
   hevyApiKey?: string;
-  claudeApiKey?: string;
+  airiaApiKey?: string;
+  airiaPipelineId?: string;
 }
 
 const CONFIG_DIR = join(homedir(), '.hevy-importer');
@@ -52,16 +53,24 @@ export class ConfigManager {
     this.config.hevyApiKey = key;
   }
 
-  public getClaudeApiKey(): string | undefined {
-    return this.config.claudeApiKey;
+  public getAiriaApiKey(): string | undefined {
+    return this.config.airiaApiKey;
   }
 
-  public setClaudeApiKey(key: string): void {
-    this.config.claudeApiKey = key;
+  public setAiriaApiKey(key: string): void {
+    this.config.airiaApiKey = key;
+  }
+
+  public getAiriaPipelineId(): string | undefined {
+    return this.config.airiaPipelineId;
+  }
+
+  public setAiriaPipelineId(id: string): void {
+    this.config.airiaPipelineId = id;
   }
 
   public hasRequiredKeys(): boolean {
-    return Boolean(this.config.hevyApiKey && this.config.claudeApiKey);
+    return Boolean(this.config.hevyApiKey && this.config.airiaApiKey && this.config.airiaPipelineId);
   }
 
   public validateHevyApiKey(key: string): boolean {
@@ -70,8 +79,8 @@ export class ConfigManager {
     return uuidRegex.test(key);
   }
 
-  public validateClaudeApiKey(key: string): boolean {
-    // Claude API key starts with sk-ant-
-    return key.startsWith('sk-ant-') && key.length > 20;
+  public validateAiriaApiKey(key: string): boolean {
+    // Basic API key validation - adjust based on Airia's format
+    return key.length > 10 && key.trim().length > 0;
   }
 }

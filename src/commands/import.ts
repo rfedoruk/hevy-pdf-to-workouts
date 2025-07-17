@@ -2,7 +2,7 @@ import { existsSync } from 'fs';
 import inquirer from 'inquirer';
 import { ConfigManager } from '../services/config.js';
 import { HevyApiClient } from '../services/hevy-api.js';
-import { ClaudeApiClient } from '../services/claude-api.js';
+import { AiriaApiClient } from '../services/airia-api.js';
 import { ExerciseMatcher } from '../utils/exercise-matcher.js';
 import { logger } from '../utils/logger.js';
 import type { WorkoutProgram, ExerciseMatch } from '../types/workout.js';
@@ -34,11 +34,11 @@ export async function importCommand(excelPath: string, options: { preview?: bool
   try {
     // Initialize API clients
     const hevyClient = new HevyApiClient(config.getHevyApiKey()!);
-    const claudeClient = new ClaudeApiClient(config.getClaudeApiKey()!);
+    const airiaClient = new AiriaApiClient(config.getAiriaApiKey()!, config.getAiriaPipelineId()!);
 
     // Step 1: Extract workout from Excel
     logger.startSpinner('Extracting workout data from Excel file...');
-    const workoutProgram = await claudeClient.extractWorkoutFromExcel(excelPath);
+    const workoutProgram = await airiaClient.extractWorkoutFromExcel(excelPath);
     logger.succeedSpinner(`Extracted: ${workoutProgram.title}`);
 
     // Step 2: Fetch exercise templates
