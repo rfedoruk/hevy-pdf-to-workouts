@@ -16,6 +16,12 @@ export class ClaudeApiClient {
     const workbook = read(fileBuffer, { type: 'buffer' });
     const excelData = this.parseExcelWorkbook(workbook);
 
+    return this.retryClaudeRequest(async () => {
+      return this.makeClaudeRequest(excelData);
+    });
+  }
+
+  private async makeClaudeRequest(excelData: any): Promise<WorkoutProgram> {
     const prompt = `
 Extract workout information from this Excel data and return it as a structured JSON object.
 
@@ -104,6 +110,51 @@ ${JSON.stringify(excelData, null, 2)}`;
     } catch (error) {
       throw new Error(`Failed to parse Claude response as JSON: ${content}`);
     }
+  }
+
+  private async retryClaudeRequest<T>(
+    requestFn: () => Promise<T>,
+    maxRetries: number = 3
+  ): Promise<T> {
+    let lastError: Error;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await requestFn();
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Check if it's a retryable error (overloaded, rate limit, etc.)
+        if (this.isRetryableError(error as Error)) {
+          if (attempt < maxRetries) {
+            const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s
+            console.log(`⚠ Claude API overloaded. Retrying in ${delay/1000}s... (attempt ${attempt}/${maxRetries})`);
+            await this.sleep(delay);
+            continue;
+          }
+        }
+        
+        // Non-retryable error or max retries reached
+        throw error;
+      }
+    }
+
+    throw lastError!;
+  }
+
+  private isRetryableError(error: Error): boolean {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes('overloaded') ||
+      message.includes('529') ||
+      message.includes('503') ||
+      message.includes('502') ||
+      message.includes('rate limit')
+    );
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private parseExcelWorkbook(workbook: any): any {
