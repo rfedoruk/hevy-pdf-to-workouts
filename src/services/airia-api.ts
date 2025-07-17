@@ -113,16 +113,20 @@ ${JSON.stringify(excelData, null, 2)}`,
   }
 
   private async pollForCompletion(executionId: string): Promise<WorkoutProgram> {
-    const maxAttempts = 30; // 5 minutes max
-    let attempts = 0;
+    // Single API call that waits for completion with 5 minute timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
 
-    while (attempts < maxAttempts) {
+    try {
       const response = await fetch(`${this.baseUrl}/PipelineExecution/${executionId}`, {
         method: 'GET',
         headers: {
           'X-API-KEY': `${this.apiKey}`,
         },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const error = await response.text();
@@ -131,38 +135,27 @@ ${JSON.stringify(excelData, null, 2)}`,
 
       const execution = await response.json() as any;
       
-      // Check different possible status field names
-      const status = execution.status || execution.state || execution.executionStatus;
+      // Parse the result - try different possible output field names
+      const result = execution.result || execution.output || execution.outputs || execution.data;
       
-      if (status === 'completed' || status === 'success' || status === 'finished') {
-        // Parse the result - try different possible output field names
-        const result = execution.result || execution.output || execution.outputs || execution.data;
-        
-        try {
-          let workoutData;
-          if (typeof result === 'string') {
-            workoutData = JSON.parse(result);
-          } else {
-            workoutData = result;
-          }
-          return workoutData as WorkoutProgram;
-        } catch (error) {
-          throw new Error(`Failed to parse Airia response as JSON: ${JSON.stringify(result)}`);
+      try {
+        let workoutData;
+        if (typeof result === 'string') {
+          workoutData = JSON.parse(result);
+        } else {
+          workoutData = result;
         }
-      } else if (status === 'failed' || status === 'error') {
-        const errorMsg = execution.error || execution.errorMessage || execution.message || 'Unknown error';
-        throw new Error(`Pipeline execution failed: ${errorMsg}`);
-      } else if (status === 'running' || status === 'pending' || status === 'in_progress') {
-        // Still running, continue polling
-        console.log(`Pipeline execution ${status}... (${attempts + 1}/${maxAttempts})`);
+        return workoutData as WorkoutProgram;
+      } catch (error) {
+        throw new Error(`Failed to parse Airia response as JSON: ${JSON.stringify(result)}`);
       }
-
-      // Wait 10 seconds before next poll
-      await this.sleep(10000);
-      attempts++;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Pipeline execution timed out after 5 minutes');
+      }
+      throw error;
     }
-
-    throw new Error('Pipeline execution timed out after 5 minutes');
   }
 
   private async retryAiriaRequest<T>(
