@@ -8,7 +8,7 @@ import { logger } from '../utils/logger.js';
 import type { WorkoutProgram, ExerciseMatch } from '../types/workout.js';
 import type { PostRoutineRequest, PostRoutineExercise, PostRoutineSet } from '../types/hevy.js';
 
-export async function importCommand(pdfPath: string, options: { preview?: boolean } = {}): Promise<void> {
+export async function importCommand(excelPath: string, options: { preview?: boolean } = {}): Promise<void> {
   const config = new ConfigManager();
 
   // Check if APIs are configured
@@ -17,9 +17,15 @@ export async function importCommand(pdfPath: string, options: { preview?: boolea
     return;
   }
 
-  // Check if PDF file exists
-  if (!existsSync(pdfPath)) {
-    logger.error(`PDF file not found: ${pdfPath}`);
+  // Check if Excel file exists
+  if (!existsSync(excelPath)) {
+    logger.error(`Excel file not found: ${excelPath}`);
+    return;
+  }
+
+  // Validate file extension
+  if (!excelPath.toLowerCase().endsWith('.xlsx') && !excelPath.toLowerCase().endsWith('.xls')) {
+    logger.error('File must be an Excel file (.xlsx or .xls)');
     return;
   }
 
@@ -30,9 +36,9 @@ export async function importCommand(pdfPath: string, options: { preview?: boolea
     const hevyClient = new HevyApiClient(config.getHevyApiKey()!);
     const claudeClient = new ClaudeApiClient(config.getClaudeApiKey()!);
 
-    // Step 1: Extract workout from PDF
-    logger.startSpinner('Extracting workout data from PDF...');
-    const workoutProgram = await claudeClient.extractWorkoutFromPdf(pdfPath);
+    // Step 1: Extract workout from Excel
+    logger.startSpinner('Extracting workout data from Excel file...');
+    const workoutProgram = await claudeClient.extractWorkoutFromExcel(excelPath);
     logger.succeedSpinner(`Extracted: ${workoutProgram.title}`);
 
     // Step 2: Fetch exercise templates

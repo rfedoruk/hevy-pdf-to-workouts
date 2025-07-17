@@ -10,7 +10,7 @@ const program = new Command();
 
 program
   .name('hevy-importer')
-  .description('Import workout plans from PDFs into Hevy')
+  .description('Import workout plans from Excel files into Hevy')
   .version('1.0.0');
 
 program
@@ -27,11 +27,11 @@ program
 
 program
   .command('import')
-  .description('Import a workout plan PDF into Hevy')
-  .argument('<pdf-file>', 'Path to the workout plan PDF file')
-  .action(async (pdfFile: string) => {
+  .description('Import a workout plan Excel file into Hevy')
+  .argument('<excel-file>', 'Path to the workout plan Excel file (.xlsx or .xls)')
+  .action(async (excelFile: string) => {
     try {
-      await importCommand(pdfFile);
+      await importCommand(excelFile);
     } catch (error) {
       logger.error(`Import failed: ${error}`);
       process.exit(1);
@@ -40,11 +40,11 @@ program
 
 program
   .command('preview')
-  .description('Preview what would be imported from a PDF without actually importing')
-  .argument('<pdf-file>', 'Path to the workout plan PDF file')
-  .action(async (pdfFile: string) => {
+  .description('Preview what would be imported from an Excel file without actually importing')
+  .argument('<excel-file>', 'Path to the workout plan Excel file (.xlsx or .xls)')
+  .action(async (excelFile: string) => {
     try {
-      await previewCommand(pdfFile);
+      await previewCommand(excelFile);
     } catch (error) {
       logger.error(`Preview failed: ${error}`);
       process.exit(1);

@@ -21,7 +21,8 @@
     "commander": "^14.0.0",
     "fuse.js": "^7.1.0",
     "inquirer": "^12.7.0",
-    "ora": "^8.2.0"
+    "ora": "^8.2.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.8",

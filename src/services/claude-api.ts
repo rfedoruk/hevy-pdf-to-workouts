@@ -1,4 +1,5 @@
 import { readFileSync } from 'fs';
+import * as XLSX from 'xlsx';
 import type { WorkoutProgram } from '../types/workout.js';
 
 export class ClaudeApiClient {
@@ -9,15 +10,15 @@ export class ClaudeApiClient {
     this.apiKey = apiKey;
   }
 
-  async extractWorkoutFromPdf(pdfPath: string): Promise<WorkoutProgram> {
-    // Read PDF file as base64
-    const pdfBuffer = readFileSync(pdfPath);
-    const base64Pdf = pdfBuffer.toString('base64');
+  async extractWorkoutFromExcel(excelPath: string): Promise<WorkoutProgram> {
+    // Read and parse Excel file
+    const workbook = XLSX.readFile(excelPath);
+    const excelData = this.parseExcelWorkbook(workbook);
 
     const prompt = `
-Extract workout information from this PDF and return it as a structured JSON object.
+Extract workout information from this Excel data and return it as a structured JSON object.
 
-The PDF contains a workout program. Please analyze it and extract:
+The Excel data contains a workout program. Please analyze it and extract:
 1. Program title and description
 2. Weekly structure (weeks 1-12)
 3. Each workout day with exercises
@@ -63,7 +64,10 @@ Important notes:
 - Maintain the week structure (1-12)
 - Be consistent with exercise names (use standard naming)
 
-Return ONLY the JSON object, no other text.`;
+Return ONLY the JSON object, no other text.
+
+Here is the Excel data:
+${JSON.stringify(excelData, null, 2)}`;
 
     const response = await fetch(this.baseUrl, {
       method: 'POST',
@@ -78,20 +82,7 @@ Return ONLY the JSON object, no other text.`;
         messages: [
           {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: prompt,
-              },
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: 'application/pdf',
-                  data: base64Pdf,
-                },
-              },
-            ],
+            content: prompt,
           },
         ],
       }),
@@ -112,6 +103,34 @@ Return ONLY the JSON object, no other text.`;
     } catch (error) {
       throw new Error(`Failed to parse Claude response as JSON: ${content}`);
     }
+  }
+
+  private parseExcelWorkbook(workbook: XLSX.WorkBook): any {
+    const result: any = {
+      sheets: {},
+      sheetNames: workbook.SheetNames,
+    };
+
+    // Parse each sheet
+    for (const sheetName of workbook.SheetNames) {
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // Convert to JSON with headers
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+        header: 1,
+        defval: '',
+        raw: false 
+      });
+
+      result.sheets[sheetName] = {
+        name: sheetName,
+        data: jsonData,
+        // Also include formatted version for easier parsing
+        formatted: XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+      };
+    }
+
+    return result;
   }
 
   async testConnection(): Promise<boolean> {
